@@ -8,6 +8,7 @@ Requirements
 ------------
 
 Beautiful Soup (version 4 or above)
+
 Pandas (0.11 or above)
 
 Usage

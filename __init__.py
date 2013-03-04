@@ -38,7 +38,13 @@ def getCurrentPlayerNamesAndURLS():
 
     return dict(names)
 
-def buildPlayerDictionary(playerNamesAndURLS):
+def buildPlayerDictionary(supressOutput=True):
+    """
+    Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
+    """
+
+    playerNamesAndURLS = getCurrentPlayerNamesAndURLS()
+
     players={}
     for name, url in playerNamesAndURLS.items():
         players[name] = {'overview_url':url}
@@ -48,9 +54,10 @@ def buildPlayerDictionary(playerNamesAndURLS):
 
     for i, (name, player_dict) in enumerate(players.items()):
         if players[name]['overview_url_content'] is None:
-            print i, 
+            if not supressOutput:
+                print i, 
         
-            overview_soup = getSoupFromURL(players[name]['overview_url'], printURL=True)
+            overview_soup = getSoupFromURL(players[name]['overview_url'], printURL=not(supressOutput))
             players[name]['overview_url_content'] = overview_soup.text
 
         
@@ -67,15 +74,19 @@ def buildPlayerDictionary(playerNamesAndURLS):
 
     return players
 
-def searchForName(playerDictionary, name):
+def searchForName(playerDictionary, search_string):
+    """Case insensitive partial search for player names, returns a list of strings,
+    names that contained the search string
+    """
     names = []
-    name = name.lower()
+    search_string = search_string.lower()
     for player_name, data in playerDictionary.items():
-        if name in player_name.lower():
+        if search_string in player_name.lower():
             names.append(player_name)
     return names
 
 def savePlayerDictionary(playerDictionary, pathToFile):
+    """Saves player dictionary to a JSON file"""
 #    for name, k in players.items():
 #        player_archive[name] = {'gamelog_url_list':k['gamelog_url_list'], 
 #                                'overview_url':k['overview_url'], 
@@ -84,6 +95,7 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     json.dump(playerDictionary, open(pathToFile), 'wb'))
 
 def loadPlayerDictionary(pathToFile):
+    """Loads previously saved player dictionary from a JSON file"""
     f = open(pathToFile)
     json_string = f.read()
     return json.loads(json_string)

@@ -83,7 +83,7 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     
     json.dump(playerDictionary, open(pathToFile), 'wb'))
 
-def loadPlayerDitcionary(pathToFile):
+def loadPlayerDictionary(pathToFile):
     f = open(pathToFile)
     json_string = f.read()
     return json.loads(json_string)

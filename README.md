@@ -25,7 +25,7 @@ players.json was generated on 03/09/2013 by buildPlayerDictionary() and savePlay
 
 
 TODO
-____
+----
 I'm considering turning this into a class, instead of using a dictionary, so one doesn't have to pass around this dictionary all the time.  Hesitant.
 
 Local Database construction.

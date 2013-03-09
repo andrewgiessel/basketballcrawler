@@ -99,7 +99,7 @@ def savePlayerDictionary(playerDictionary, pathToFile):
 #                                'overview_url':k['overview_url'], 
 #                                'overview_url_content':k['overview_url_content']}
     
-    json.dump(playerDictionary, open(pathToFile), 'wb')
+    json.dump(playerDictionary, open(pathToFile, 'wb'), indent=0)
 
 def loadPlayerDictionary(pathToFile):
     """Loads previously saved player dictionary from a JSON file"""

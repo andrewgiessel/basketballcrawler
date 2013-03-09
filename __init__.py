@@ -6,6 +6,8 @@ import requests
 import time
 import json
 
+import difflib
+
 import os
 
 __all__ = ['buildPlayerDictionary', 'searchForName', 'savePlayerDictionary', 'loadPlayerDictionary']
@@ -77,14 +79,11 @@ def buildPlayerDictionary(supressOutput=True):
 
 def searchForName(playerDictionary, search_string):
     """Case insensitive partial search for player names, returns a list of strings,
-    names that contained the search string
+    names that contained the search string.  Uses difflib for fuzzy matching.
     """
-    names = []
     search_string = search_string.lower()
-    for player_name, data in playerDictionary.items():
-        if search_string in player_name.lower():
-            names.append(player_name)
-    return names
+
+    return difflib.get_close_matches(search_string, playerDictionary.keys())
 
 def savePlayerDictionary(playerDictionary, pathToFile):
     """Saves player dictionary to a JSON file"""

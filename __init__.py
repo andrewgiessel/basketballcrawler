@@ -32,12 +32,12 @@ def getCurrentPlayerNamesAndURLS(supressOutput=True):
     for letter in letters:
         letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), supressOutput)
 
-    # we know that all the currently active players have <strong> tags, so we'll limit our names to those
-    current_names = letter_page.findAll('strong')
-    for n in current_names:
-        name_data = n.children.next()
-        names.append((name_data.contents[0], 'http://www.basketball-reference.com' + name_data.attrs['href']))
-    time.sleep(1) # sleeping to be kind for requests
+        # we know that all the currently active players have <strong> tags, so we'll limit our names to those
+        current_names = letter_page.findAll('strong')
+        for n in current_names:
+            name_data = n.children.next()
+            names.append((name_data.contents[0], 'http://www.basketball-reference.com' + name_data.attrs['href']))
+        time.sleep(1) # sleeping to be kind for requests
 
     return dict(names)
 

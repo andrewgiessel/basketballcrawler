@@ -59,7 +59,7 @@ def buildPlayerDictionary(supressOutput=True):
         players[name]['gamelog_url_list'] = []
         players[name]['gamelog_data'] = None
     
-    print "Grabbing player overview URLs...", 
+    print "Grabbing player overview URLs..."
     sys.stdout.flush()
     for i, (name, player_dict) in enumerate(players.items()):
         if players[name]['overview_url_content'] is None:

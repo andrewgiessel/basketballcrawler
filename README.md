@@ -3,6 +3,7 @@ basketballcrawler
 
 This is a python module to scrape basketball-reference.com and convert various stats into usable data structures for analysis.
 
+[Here](http://nbviewer.ipython.org/urls/raw.github.com/andrewgiessel/basketballcrawler/master/basketball_scraper_notebook.ipynb) is a link to a sample IPython Notebook file demonstrating the library.
 
 Requirements
 ------------
@@ -16,7 +17,7 @@ Usage
 
 Still developing the API.  Right now you can get a list of all player overview urls, generate a list of game log urls for a given player, and convert that list into pandas dataframe.
 
-I'll be putting up a IPython notebook here, too.
+
 
 Notes
 -----

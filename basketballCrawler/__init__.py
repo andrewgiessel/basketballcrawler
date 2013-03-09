@@ -160,5 +160,5 @@ def soupTableToDF(table_soup, header):
 def gameLogs(playerDictionary, name):
 
     ### would be nice to put some caching logic here...
-    return dfFromGameLogURL(playerDictionary[name]['gamelog_url_list'])
+    return dfFromGameLogURLList(playerDictionary[name]['gamelog_url_list'])
 

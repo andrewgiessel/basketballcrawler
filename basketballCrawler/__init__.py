@@ -1,13 +1,17 @@
-import pandas
-
-from bs4 import BeautifulSoup
-import requests
-
 import time
 import json
-import sys
+import string
+import pandas
+import logging
+import requests
 
-import os
+from bs4 import BeautifulSoup
+
+BASKETBALL_LOG = 'basketball.log'
+
+logging.basicConfig(filename=BASKETBALL_LOG,
+                    level=logging.DEBUG,
+                   )
 
 __all__ = ['buildPlayerDictionary', 'searchForName', 'savePlayerDictionary', 'loadPlayerDictionary']
 
@@ -26,9 +30,10 @@ def getSoupFromURL(url, supressOutput=True):
     return BeautifulSoup(r.text)
 
 def getCurrentPlayerNamesAndURLS(supressOutput=True):
-    letters = list('abcdefghijklmnopqrstuvwxyz')
+    
     names = []
-    for letter in letters:
+    
+    for letter in string.ascii_lowercase:
         letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), supressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
@@ -44,11 +49,10 @@ def buildPlayerDictionary(supressOutput=True):
     """
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
-    print "Grabbing name list..."
-    sys.stdout.flush()
+
+    logging.debug("Begin grabbing name list")
     playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
-    print "done."
-    sys.stdout.flush()
+    logging.debug("Name list grabbing complete")
 
     players={}
     for name, url in playerNamesAndURLS.items():
@@ -56,9 +60,9 @@ def buildPlayerDictionary(supressOutput=True):
         players[name]['overview_url_content'] = None
         players[name]['gamelog_url_list'] = []
         players[name]['gamelog_data'] = None
+ 
+    logging.debug("Grabbing player overview URLs")
     
-    print "Grabbing player overview URLs..."
-    sys.stdout.flush()
     for i, (name, player_dict) in enumerate(players.items()):
         if players[name]['overview_url_content'] is None:
             if not supressOutput:
@@ -78,8 +82,9 @@ def buildPlayerDictionary(supressOutput=True):
                 players[name]['gamelog_url_list'].append('http://www.basketball-reference.com' + game_log_link.get('href'))
         
             time.sleep(1) # sleep to be kind.
-    print "done."
-    sys.stdout.flush()
+
+    logging.debug("buildPlayerDictionary complete")
+    
     return players
 
 def searchForName(playerDictionary, search_string):

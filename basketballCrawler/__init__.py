@@ -7,8 +7,6 @@ import time
 import json
 import sys
 
-import difflib
-
 import os
 
 __all__ = ['buildPlayerDictionary', 'searchForName', 'savePlayerDictionary', 'loadPlayerDictionary']
@@ -89,8 +87,8 @@ def searchForName(playerDictionary, search_string):
     names that contained the search string.  Uses difflib for fuzzy matching.
     """
     search_string = search_string.lower()
+    return [name for name in playerDictionary.keys() if search_string in name.lower()]
 
-    return difflib.get_close_matches(search_string, playerDictionary.keys())
 
 def savePlayerDictionary(playerDictionary, pathToFile):
     """Saves player dictionary to a JSON file"""
@@ -157,3 +155,10 @@ def soupTableToDF(table_soup, header):
         
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
         return pandas.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
+
+
+def gameLogs(playerDictionary, name):
+
+    ### would be nice to put some caching logic here...
+    return dfFromGameLogURL(playerDictionary[name]['gamelog_url_list'])
+

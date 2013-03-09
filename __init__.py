@@ -45,8 +45,11 @@ def buildPlayerDictionary(supressOutput=True):
     """
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
-
+    print "Grabbing name list..."
+    sys.stdout.flush()
     playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
+    print "done."
+    sys.stdout.flush()
 
     players={}
     for name, url in playerNamesAndURLS.items():
@@ -54,13 +57,15 @@ def buildPlayerDictionary(supressOutput=True):
         players[name]['overview_url_content'] = None
         players[name]['gamelog_url_list'] = []
         players[name]['gamelog_data'] = None
-
+    
+    print "Grabbing player overview URLs...", 
+    sys.stdout.flush()
     for i, (name, player_dict) in enumerate(players.items()):
         if players[name]['overview_url_content'] is None:
             if not supressOutput:
                 print i, 
         
-            overview_soup = getSoupFromURL(players[name]['overview_url'], printURL=not(supressOutput))
+            overview_soup = getSoupFromURL(players[name]['overview_url'], supressOutput)
             players[name]['overview_url_content'] = overview_soup.text
 
         
@@ -74,7 +79,8 @@ def buildPlayerDictionary(supressOutput=True):
                 players[name]['gamelog_url_list'].append('http://www.basketball-reference.com' + game_log_link.get('href'))
         
             time.sleep(1) # sleep to be kind.
-
+    print "done."
+    sys.stdout.flush()
     return players
 
 def searchForName(playerDictionary, search_string):

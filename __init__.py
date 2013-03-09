@@ -12,11 +12,11 @@ import os
 
 __all__ = ['buildPlayerDictionary', 'searchForName', 'savePlayerDictionary', 'loadPlayerDictionary']
 
-def getSoupFromURL(url, printURL=False):
+def getSoupFromURL(url, supressOutput=True):
     """
     This function grabs the url and returns and returns the BeautifulSoup object
     """
-    if printURL:
+    if not supressOutput:
         print url
     
     try:
@@ -26,11 +26,11 @@ def getSoupFromURL(url, printURL=False):
     
     return BeautifulSoup(r.text)
 
-def getCurrentPlayerNamesAndURLS():
+def getCurrentPlayerNamesAndURLS(supressOutput=True):
     letters = list('abcdefghijklmnopqrstuvwxyz')
     names = []
     for letter in letters:
-        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter))
+        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), supressOutput)
 
     # we know that all the currently active players have <strong> tags, so we'll limit our names to those
     current_names = letter_page.findAll('strong')
@@ -46,7 +46,7 @@ def buildPlayerDictionary(supressOutput=True):
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
 
-    playerNamesAndURLS = getCurrentPlayerNamesAndURLS()
+    playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
 
     players={}
     for name, url in playerNamesAndURLS.items():

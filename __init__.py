@@ -8,6 +8,7 @@ import json
 
 import os
 
+__all__ = ['buildPlayerDictionary', 'searchForName', 'savePlayerDictionary', 'loadPlayerDictionary']
 
 def getSoupFromURL(url, printURL=False):
     """

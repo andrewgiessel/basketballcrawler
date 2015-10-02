@@ -1,3 +1,6 @@
+# basketball log
+basketball.log
+
 *.py[cod]
 
 # C extensions
@@ -34,6 +37,20 @@ nosetests.xml
 .project
 .pydevproject
 
-# emacs
-*#
-*.*
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+
+# IPython Notebook
+.ipynb_checkpoints/
+
+# OSX
+.DS_Store
+._*

@@ -21,15 +21,14 @@ Still developing the API.  Right now you can get a list of all player overview u
 
 Notes
 -----
-players.json was generated on 03/09/2013 by buildPlayerDictionary() and savePlayerDictionary().  It is a good way to jumpstart your analysis and can be loaded with ... loadPlayerDictoinary().  Note that it's a pretty large (13M) file.  I'd recommend building your own, fresh copy.  Note that it takes about 10 minutes due to spacing out the web requests.
+
+`players.json` was generated on 03/09/2013 by `buildPlayerDictionary()` and `savePlayerDictionary()`.  It is a good way to jumpstart your analysis and can be loaded with ... `loadPlayerDictoinary()`.  Note that it's a pretty large (13M) file.  I'd recommend building your own, fresh copy.  Note that it takes about 10 minutes due to spacing out the web requests.
 
 
 TODO
 ----
-I'm considering turning this into a class, instead of using a dictionary, so one doesn't have to pass around this dictionary all the time.  Hesitant.
 
-Local Database construction.
-
-League-wide statistics.
-
-Extract other key information from the player overview page- position might be an especially useful variable to use for supervised learning and height/weight is a clearly important variable as well.
+- I'm considering turning this into a class, instead of using a dictionary, so one doesn't have to pass around this dictionary all the time.  Hesitant.
+- Local Database construction.
+- League-wide statistics.
+- Extract other key information from the player overview page- position might be an especially useful variable to use for supervised learning and height/weight is a clearly important variable as well.

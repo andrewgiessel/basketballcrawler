@@ -26,7 +26,8 @@ Notes
 -----
 
 `players.json` was generated on 03/09/2013 by `buildPlayerDictionary()` and `savePlayerDictionary()`.
-To create the most recent `players.json`, you can use as follows:
+I'd recommend building your own, fresh copy. It takes about 10 minutes to scrape from the site.
+To create the most recent `players.json`, you can use as follows.
 
 ```python
 import basketballCrawler as bc
@@ -35,13 +36,12 @@ bc.savePlayerDictionary(players, '/path/to/file')
 ```
 
 You can also download generated `players.json`. However, note that it's a pretty large (13M) file.
-I'd recommend building your own, fresh copy. It takes about 10 minutes to scrape from the site.
 
 ```python
 players = bc.loadPlayerDictionary('/path/to/players.json')
 ```
 
-In order to search player name, use `searchForName`
+In order to search player name, use `searchForName` function, for example,
 
 ```python
 searched_player = bc.searchForName(players, 'Murphey') # players is player dictionary

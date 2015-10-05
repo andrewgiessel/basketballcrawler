@@ -1,9 +1,11 @@
 basketballcrawler
 ==================
 
-This is a python module to scrape basketball-reference.com and convert various stats into usable data structures for analysis.
+This is a python module to scrape [basketball-reference.com](http://www.basketball-reference.com/) and convert various
+stats into usable data structures for analysis.
 
-[Here](https://github.com/andrewgiessel/basketballcrawler/blob/master/basketball_scraper_notebook.ipynb) is a link to a sample IPython Notebook file demonstrating the library.
+[Here](https://github.com/andrewgiessel/basketballcrawler/blob/master/basketball_scraper_notebook.ipynb) is a link to a
+sample IPython Notebook file demonstrating the library.
 
 
 Requirements
@@ -16,13 +18,34 @@ Requirements
 Usage
 -----
 
-Still developing the API.  Right now you can get a list of all player overview urls, generate a list of game log urls for a given player, and convert that list into pandas dataframe.
+Still developing the API.  Right now you can get a list of all player overview urls, generate a list of game log urls for
+a given player, and convert that list into pandas dataframe.
 
 
 Notes
 -----
 
-`players.json` was generated on 03/09/2013 by `buildPlayerDictionary()` and `savePlayerDictionary()`.  It is a good way to jumpstart your analysis and can be loaded with ... `loadPlayerDictoinary()`.  Note that it's a pretty large (13M) file.  I'd recommend building your own, fresh copy.  Note that it takes about 10 minutes due to spacing out the web requests.
+`players.json` was generated on 03/09/2013 by `buildPlayerDictionary()` and `savePlayerDictionary()`.
+To create the most recent `players.json`, you can use as follows:
+
+```python
+import basketballCrawler as bc
+players = bc.buildPlayerDictionary()
+bc.savePlayerDictionary(players, '/path/to/file')
+```
+
+You can also download generated `players.json`. However, note that it's a pretty large (13M) file.
+I'd recommend building your own, fresh copy. It takes about 10 minutes to scrape from the site.
+
+```python
+players = bc.loadPlayerDictionary('/path/to/players.json')
+```
+
+In order to search player name, use `searchForName`
+
+```python
+searched_player = bc.searchForName(players, 'Murphey') # players is player dictionary
+```
 
 
 TODO

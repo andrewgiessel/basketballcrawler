@@ -5,6 +5,7 @@ import pandas as pd
 import logging
 import requests
 from bs4 import BeautifulSoup
+from difflib import SequenceMatcher
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
            'buildPlayerDictionary', 'searchForName',

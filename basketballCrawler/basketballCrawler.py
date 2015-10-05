@@ -1,10 +1,11 @@
 import time
 import json
 import string
-import pandas
+import pandas as pd
 import logging
 import requests
 from bs4 import BeautifulSoup
+from difflib import SequenceMatcher
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
            'buildPlayerDictionary', 'searchForName',
@@ -93,13 +94,25 @@ def buildPlayerDictionary(supressOutput=True):
     return players
 
 
-def searchForName(playerDictionary, search_string):
+def fuzzy_ratio(name, search_string):
+    """
+    Calculate difflib fuzzy ratio
+    """
+    return SequenceMatcher(None, search_string.lower(), name.lower()).ratio()
+
+
+def searchForName(playerDictionary, search_string, threshold=0.5):
     """
     Case insensitive partial search for player names, returns a list of strings,
     names that contained the search string.  Uses difflib for fuzzy matching.
+    threshold:
     """
+    players_name = playerDictionary.keys()
     search_string = search_string.lower()
-    return [name for name in playerDictionary.keys() if search_string in name.lower()]
+    players_ratio = map(lambda name: [name, fuzzy_ratio(name, search_string)], players_name)
+    searched_player_dict = [name for name in players_name if search_string in name.lower()]
+    searched_player_fuzzy = [player for (player, ratio) in players_ratio if ratio > threshold]
+    return list(set(searched_player_dict + searched_player_fuzzy))
 
 
 def savePlayerDictionary(playerDictionary, pathToFile):
@@ -123,12 +136,12 @@ def loadPlayerDictionary(pathToFile):
     return json.loads(json_string)
 
 
-### Functions to parse the gamelogs
 def dfFromGameLogURLList(gamelogs):
     """
+    Functions to parse the gamelogs
     Takes a list of game log urls and returns a concatenated DataFrame
     """
-    return pandas.concat([dfFromGameLogURL(g) for g in gamelogs])
+    return pd.concat([dfFromGameLogURL(g) for g in gamelogs])
 
 
 def dfFromGameLogURL(url):
@@ -159,7 +172,7 @@ def dfFromGameLogURL(url):
     elif playoff is None:
         return reg
     else:
-        return pandas.concat([reg, playoff])
+        return pd.concat([reg, playoff])
 
 
 def soupTableToDF(table_soup, header):
@@ -176,10 +189,9 @@ def soupTableToDF(table_soup, header):
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pandas.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
+        return pd.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
 
 
 def gameLogs(playerDictionary, name):
-
     ### would be nice to put some caching logic here...
     return dfFromGameLogURLList(playerDictionary[name]['gamelog_url_list'])

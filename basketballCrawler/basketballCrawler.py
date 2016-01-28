@@ -6,6 +6,7 @@ import logging
 import requests
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
+import re
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
            'buildPlayerDictionary', 'searchForName',
@@ -56,6 +57,11 @@ def buildPlayerDictionary(supressOutput=True):
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
 
+    # Regex patterns for player info
+    POSN_PATTERN = u'^Position: (.*?)\u25aa'
+    HEIGHT_PATTERN = u'Height: ([0-9]-[0-9]{1,2})'
+    WEIGHT_PATTERN = u'Weight: ([0-9]{2,3}) lbs'
+
     logging.debug("Begin grabbing name list")
     playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
     logging.debug("Name list grabbing complete")
@@ -77,6 +83,19 @@ def buildPlayerDictionary(supressOutput=True):
             overview_soup = getSoupFromURL(players[name]['overview_url'], supressOutput)
             players[name]['overview_url_content'] = overview_soup.text
 
+            try:
+                player_infotext = overview_soup.findAll('p',attrs={'class':'padding_bottom_half'})[0].text.split('\n')[0]
+
+                positions = re.findall(POSN_PATTERN,player_infotext)[0].strip().encode("utf8").split(" and ")
+                height = re.findall(HEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
+                weight = re.findall(WEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
+
+                players[name]["positions"] = positions
+                players[name]["height"] = height
+                players[name]["weight"] = weight
+            except Exception as ex:
+                logging.error(ex.message)
+                players[name]['positions'] = []
 
             # the links to each year's game logs are in <li> tags, and the text contains 'Game Logs'
             # so we can use those to pull out our urls.

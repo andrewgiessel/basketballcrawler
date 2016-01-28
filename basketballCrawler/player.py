@@ -1,5 +1,4 @@
-import requests
-from bs4 import BeautifulSoup
+from soup_utils import getSoupFromURL
 import re
 import logging
 
@@ -61,17 +60,3 @@ class Player(object):
 
             for game_log_link in game_log_links:
                 self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
-
-def getSoupFromURL(url, suppressOutput=True):
-    """
-    This function grabs the url and returns and returns the BeautifulSoup object
-    """
-    if not suppressOutput:
-        print url
-
-    try:
-        r = requests.get(url)
-    except:
-        return None
-
-    return BeautifulSoup(r.text)

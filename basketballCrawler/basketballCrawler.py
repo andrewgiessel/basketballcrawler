@@ -3,9 +3,6 @@ import json
 import string
 import pandas as pd
 import logging
-import requests
-import re
-from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from player import Player,getSoupFromURL
 

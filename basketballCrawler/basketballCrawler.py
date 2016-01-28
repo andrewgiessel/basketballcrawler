@@ -95,7 +95,6 @@ def buildPlayerDictionary(supressOutput=True):
                 players[name]["weight"] = weight
             except Exception as ex:
                 logging.error(ex.message)
-                print name,ex.message
                 players[name]['positions'] = []
 
             # the links to each year's game logs are in <li> tags, and the text contains 'Game Logs'

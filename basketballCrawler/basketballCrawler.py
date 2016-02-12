@@ -20,12 +20,12 @@ logging.basicConfig(filename=BASKETBALL_LOG,
 
 
 
-def getCurrentPlayerNamesAndURLS(supressOutput=True):
+def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     names = []
 
     for letter in string.ascii_lowercase:
-        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), supressOutput)
+        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
         current_names = letter_page.findAll('strong')
@@ -37,13 +37,13 @@ def getCurrentPlayerNamesAndURLS(supressOutput=True):
     return dict(names)
 
 
-def buildPlayerDictionary(supressOutput=True):
+def buildPlayerDictionary(suppressOutput=True):
     """
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
 
     logging.debug("Begin grabbing name list")
-    playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
+    playerNamesAndURLS = getCurrentPlayerNamesAndURLS(suppressOutput)
     logging.debug("Name list grabbing complete")
 
     players={}

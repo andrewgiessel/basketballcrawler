@@ -1,12 +1,9 @@
 from soup_utils import getSoupFromURL
 import re
 import logging
+import json
 
 class Player(object):
-    """
-
-    """
-
     # Regex patterns for player info
     POSN_PATTERN = u'^Position: (.*?)\u25aa'
     HEIGHT_PATTERN = u'Height: ([0-9]-[0-9]{1,2})'
@@ -23,17 +20,26 @@ class Player(object):
     gamelog_data = None
     gamelog_url_list = []
 
-    def __init__(self,_name,_overview_url):
+    def __init__(self,_name,_overview_url,scrape_data=True):
         self.name = _name
         self.overview_url = _overview_url
-        self.scrape_data()
+
+        # Explicitly declaring all fields in the constructor will ensure that
+        # they're included in JSON serialization
+        self.positions = []
+        self.height = None
+        self.weight = None
+        self.overview_url_content = None
+        self.gamelog_data = None
+        self.gamelog_url_list = []
+
+        if scrape_data:
+            self.scrape_data()
 
     def scrape_data(self):
         print self.name,self.overview_url
         if self.overview_url_content is not None:
             raise Exception("Can't populate this!")
-
-
 
         overview_soup = getSoupFromURL(self.overview_url)
         self.overview_url_content = overview_soup.text
@@ -60,3 +66,6 @@ class Player(object):
 
             for game_log_link in game_log_links:
                 self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
+
+    def to_json(self):
+        return json.dumps(self.__dict__)

@@ -48,7 +48,7 @@ def buildPlayerDictionary(suppressOutput=True):
 
     players={}
     for name, url in playerNamesAndURLS.items():
-        players[name] = Player(name,url)
+        players[name] = Player(name,url,scrape_data=True)
         time.sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
@@ -81,21 +81,23 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     """
     Saves player dictionary to a JSON file
     """
-#    for name, k in players.items():
-#        player_archive[name] = {'gamelog_url_list':k['gamelog_url_list'],
-#                                'overview_url':k['overview_url'],
-#                                'overview_url_content':k['overview_url_content']}
-
-    json.dump(playerDictionary, open(pathToFile, 'wb'), indent=0)
+    player_json = [player.to_json() for player in playerDictionary]
+    json.dump(player_json, open(pathToFile, 'wb'), indent=0)
 
 
 def loadPlayerDictionary(pathToFile):
     """
     Loads previously saved player dictionary from a JSON file
     """
-    f = open(pathToFile)
-    json_string = f.read()
-    return json.loads(json_string)
+    result = {}
+    with open(pathToFile) as f:
+        json_dict = json.loads(f.read())
+        for player_name in json_dict:
+            parsed_player = Player(None,None,False)
+            parsed_player.__dict__ = json_dict[player_name]
+            result[player_name] = parsed_player
+    return result
+
 
 
 def dfFromGameLogURLList(gamelogs):
@@ -156,4 +158,4 @@ def soupTableToDF(table_soup, header):
 
 def gameLogs(playerDictionary, name):
     ### would be nice to put some caching logic here...
-    return dfFromGameLogURLList(playerDictionary[name]['gamelog_url_list'])
+    return dfFromGameLogURLList(playerDictionary[name].gamelog_url_list)

@@ -3,10 +3,9 @@ import json
 import string
 import pandas as pd
 import logging
-import requests
-from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
-import re
+from player import Player,getSoupFromURL
+
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
            'buildPlayerDictionary', 'searchForName',
@@ -17,30 +16,16 @@ BASKETBALL_LOG = 'basketball.log'
 
 logging.basicConfig(filename=BASKETBALL_LOG,
                     level=logging.DEBUG,
-                   )
+                    )
 
 
-def getSoupFromURL(url, supressOutput=True):
-    """
-    This function grabs the url and returns and returns the BeautifulSoup object
-    """
-    if not supressOutput:
-        print url
 
-    try:
-        r = requests.get(url)
-    except:
-        return None
-
-    return BeautifulSoup(r.text)
-
-
-def getCurrentPlayerNamesAndURLS(supressOutput=True):
+def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     names = []
 
     for letter in string.ascii_lowercase:
-        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), supressOutput)
+        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
         current_names = letter_page.findAll('strong')
@@ -52,61 +37,19 @@ def getCurrentPlayerNamesAndURLS(supressOutput=True):
     return dict(names)
 
 
-def buildPlayerDictionary(supressOutput=True):
+def buildPlayerDictionary(suppressOutput=True):
     """
     Builds a dictionary for all current players in the league-- this takes about 10 minutes to run!
     """
 
-    # Regex patterns for player info
-    POSN_PATTERN = u'^Position: (.*?)\u25aa'
-    HEIGHT_PATTERN = u'Height: ([0-9]-[0-9]{1,2})'
-    WEIGHT_PATTERN = u'Weight: ([0-9]{2,3}) lbs'
-
     logging.debug("Begin grabbing name list")
-    playerNamesAndURLS = getCurrentPlayerNamesAndURLS(supressOutput)
+    playerNamesAndURLS = getCurrentPlayerNamesAndURLS(suppressOutput)
     logging.debug("Name list grabbing complete")
 
     players={}
     for name, url in playerNamesAndURLS.items():
-        players[name] = {'overview_url':url}
-        players[name]['overview_url_content'] = None
-        players[name]['gamelog_url_list'] = []
-        players[name]['gamelog_data'] = None
-
-    logging.debug("Grabbing player overview URLs")
-
-    for i, (name, player_dict) in enumerate(players.items()):
-        if players[name]['overview_url_content'] is None:
-            if not supressOutput:
-                print i,
-
-            overview_soup = getSoupFromURL(players[name]['overview_url'], supressOutput)
-            players[name]['overview_url_content'] = overview_soup.text
-
-            try:
-                player_infotext = overview_soup.findAll('p',attrs={'class':'padding_bottom_half'})[0].text.split('\n')[0]
-
-                positions = re.findall(POSN_PATTERN,player_infotext)[0].strip().encode("utf8").split(" and ")
-                height = re.findall(HEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
-                weight = re.findall(WEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
-
-                players[name]["positions"] = positions
-                players[name]["height"] = height
-                players[name]["weight"] = weight
-            except Exception as ex:
-                logging.error(ex.message)
-                players[name]['positions'] = []
-
-            # the links to each year's game logs are in <li> tags, and the text contains 'Game Logs'
-            # so we can use those to pull out our urls.
-            for li in overview_soup.find_all('li'):
-                if 'Game Logs' in li.getText():
-                    game_log_links =  li.findAll('a')
-
-            for game_log_link in game_log_links:
-                players[name]['gamelog_url_list'].append('http://www.basketball-reference.com' + game_log_link.get('href'))
-
-            time.sleep(1) # sleep to be kind.
+        players[name] = Player(name,url,scrape_data=True)
+        time.sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
 
@@ -138,21 +81,23 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     """
     Saves player dictionary to a JSON file
     """
-#    for name, k in players.items():
-#        player_archive[name] = {'gamelog_url_list':k['gamelog_url_list'],
-#                                'overview_url':k['overview_url'],
-#                                'overview_url_content':k['overview_url_content']}
-
-    json.dump(playerDictionary, open(pathToFile, 'wb'), indent=0)
+    player_json = [player.to_json() for player in playerDictionary]
+    json.dump(player_json, open(pathToFile, 'wb'), indent=0)
 
 
 def loadPlayerDictionary(pathToFile):
     """
     Loads previously saved player dictionary from a JSON file
     """
-    f = open(pathToFile)
-    json_string = f.read()
-    return json.loads(json_string)
+    result = {}
+    with open(pathToFile) as f:
+        json_dict = json.loads(f.read())
+        for player_name in json_dict:
+            parsed_player = Player(None,None,False)
+            parsed_player.__dict__ = json_dict[player_name]
+            result[player_name] = parsed_player
+    return result
+
 
 
 def dfFromGameLogURLList(gamelogs):
@@ -213,4 +158,4 @@ def soupTableToDF(table_soup, header):
 
 def gameLogs(playerDictionary, name):
     ### would be nice to put some caching logic here...
-    return dfFromGameLogURLList(playerDictionary[name]['gamelog_url_list'])
+    return dfFromGameLogURLList(playerDictionary[name].gamelog_url_list)

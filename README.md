@@ -6,7 +6,7 @@ basketballcrawler
 This is a python module to scrape [basketball-reference.com](http://www.basketball-reference.com/) and convert various
 stats into usable data structures for analysis.
 
-[Here](https://github.com/andrewgiessel/basketballcrawler/blob/master/basketball_scraper_notebook.ipynb) is a link to a
+[Here](example_notebook.ipynb) is a link to a
 sample IPython Notebook file demonstrating the library.
 
 

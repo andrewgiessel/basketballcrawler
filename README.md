@@ -6,7 +6,7 @@ basketballcrawler
 This is a python module to scrape [basketball-reference.com](http://www.basketball-reference.com/) and convert various
 stats into usable data structures for analysis.
 
-[Here](https://github.com/andrewgiessel/basketballcrawler/blob/master/basketball_scraper_notebook.ipynb) is a link to a
+[Here](example_notebook.ipynb) is a link to a
 sample IPython Notebook file demonstrating the library.
 
 
@@ -27,7 +27,7 @@ a given player, and convert that list into pandas dataframe.
 Notes
 -----
 
-`players.json` was generated on 03/09/2013 by `buildPlayerDictionary()` and `savePlayerDictionary()`.
+`players.json` was generated on 02/11/2016 by `buildPlayerDictionary()` and `savePlayerDictionary()`.
 I'd recommend building your own, fresh copy. It takes about 10 minutes to scrape from the site.
 To create the most recent `players.json`, you can use as follows.
 
@@ -52,8 +52,5 @@ searched_player = bc.searchForName(players, 'Murphey') # players is player dicti
 
 TODO
 ----
-
-- I'm considering turning this into a class, instead of using a dictionary, so one doesn't have to pass around this dictionary all the time.  Hesitant.
 - Local Database construction.
 - League-wide statistics.
-- Extract other key information from the player overview page- position might be an especially useful variable to use for supervised learning and height/weight is a clearly important variable as well.

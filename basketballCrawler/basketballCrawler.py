@@ -31,7 +31,10 @@ def getCurrentPlayerNamesAndURLS(suppressOutput=True):
         current_names = letter_page.findAll('strong')
         for n in current_names:
             name_data = n.children.next()
-            names.append((name_data.contents[0], 'http://www.basketball-reference.com' + name_data.attrs['href']))
+            try:
+                names.append((name_data.contents[0], 'http://www.basketball-reference.com' + name_data.attrs['href']))
+            except Exception as e:
+                pass
         time.sleep(1) # sleeping to be kind for requests
 
     return dict(names)

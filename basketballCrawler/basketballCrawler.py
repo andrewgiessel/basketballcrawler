@@ -84,7 +84,7 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     """
     Saves player dictionary to a JSON file
     """
-    player_json = [player.to_json() for player in playerDictionary]
+    player_json = {name: player_data.to_json() for name, player_data in playerDictionary.items()}
     json.dump(player_json, open(pathToFile, 'wb'), indent=0)
 
 

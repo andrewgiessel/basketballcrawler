@@ -28,7 +28,7 @@ class Player(object):
         # they're included in JSON serialization
         self.positions = []
         self.height = None
-        self.weight = 1
+        self.weight = None
         self.overview_url_content = None
         self.gamelog_data = None
         self.gamelog_url_list = []

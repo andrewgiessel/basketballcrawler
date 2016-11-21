@@ -3,7 +3,7 @@ import json
 import string
 import pandas as pd
 import logging
-from bs4 import Comment, B
+from bs4 import Comment, BeautifulSoup
 from difflib import SequenceMatcher
 from player import Player, getSoupFromURL
 

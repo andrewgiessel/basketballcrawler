@@ -3,6 +3,7 @@ import json
 import string
 import pandas as pd
 import logging
+from bs4 import Comment, B
 from difflib import SequenceMatcher
 from player import Player, getSoupFromURL
 
@@ -118,7 +119,12 @@ def dfFromGameLogURL(url):
     glsoup = getSoupFromURL(url)
 
     reg_season_table = glsoup.findAll('table', attrs={'id': 'pgl_basic'})  # id for reg season table
-    playoff_table = glsoup.findAll('table', attrs={'id': 'pgl_basic_playoffs'}) # id for playoff table
+    playoff_table = glsoup.find_all(string = lambda text: isinstance(text, Comment))
+    try:
+        playoff_table = BeautifulSoup(filter(lambda x: 'pgl_basic_playoffs' in x, playoff_table)[0])
+        playoff_table = playoff_table.findAll('table', attrs={'id': 'pgl_basic_playoffs'}) # id for playoff table
+    except:
+        playoff_table = []
 
     # parse the table header.  we'll use this for the creation of the DataFrame
     header = []

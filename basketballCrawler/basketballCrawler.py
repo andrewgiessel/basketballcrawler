@@ -4,7 +4,7 @@ import string
 import pandas as pd
 import logging
 from difflib import SequenceMatcher
-from player import Player,getSoupFromURL
+from player import Player, getSoupFromURL
 
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
@@ -51,7 +51,7 @@ def buildPlayerDictionary(suppressOutput=True):
 
     players={}
     for name, url in playerNamesAndURLS.items():
-        players[name] = Player(name,url,scrape_data=True)
+        players[name] = Player(name, url, scrape_data=True)
         time.sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
@@ -123,8 +123,11 @@ def dfFromGameLogURL(url):
     # parse the table header.  we'll use this for the creation of the DataFrame
     header = []
     for th in reg_season_table[0].findAll('th'):
-        if not th.getText() in header:
-            header.append(th.getText())
+        if not th.getText() in header :
+            try:
+                int(th.getText())
+            except:
+                header.append(th.getText())
 
     # add in headers for home/away and w/l columns. a must to get the DataFrame to parse correctly
 
@@ -156,7 +159,7 @@ def soupTableToDF(table_soup, header):
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pd.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
+        return pd.io.parsers.TextParser(parsed_table, names = header[1:], index_col=0, parse_dates=True).get_chunk()
 
 
 def gameLogs(playerDictionary, name):

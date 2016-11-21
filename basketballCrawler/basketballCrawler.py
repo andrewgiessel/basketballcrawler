@@ -3,8 +3,9 @@ import json
 import string
 import pandas as pd
 import logging
+from bs4 import Comment, BeautifulSoup
 from difflib import SequenceMatcher
-from player import Player,getSoupFromURL
+from player import Player, getSoupFromURL
 
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
@@ -24,7 +25,7 @@ def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     names = []
 
-    for letter in string.ascii_lowercase:
+    for letter in string.ascii_lowercase[0]:
         letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
@@ -51,7 +52,7 @@ def buildPlayerDictionary(suppressOutput=True):
 
     players={}
     for name, url in playerNamesAndURLS.items():
-        players[name] = Player(name,url,scrape_data=True)
+        players[name] = Player(name, url, scrape_data=True)
         time.sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
@@ -118,13 +119,21 @@ def dfFromGameLogURL(url):
     glsoup = getSoupFromURL(url)
 
     reg_season_table = glsoup.findAll('table', attrs={'id': 'pgl_basic'})  # id for reg season table
-    playoff_table = glsoup.findAll('table', attrs={'id': 'pgl_basic_playoffs'}) # id for playoff table
+    playoff_table = glsoup.find_all(string = lambda text: isinstance(text, Comment))
+    try:
+        playoff_table = BeautifulSoup(filter(lambda x: 'pgl_basic_playoffs' in x, playoff_table)[0])
+        playoff_table = playoff_table.findAll('table', attrs={'id': 'pgl_basic_playoffs'}) # id for playoff table
+    except:
+        playoff_table = []
 
     # parse the table header.  we'll use this for the creation of the DataFrame
     header = []
     for th in reg_season_table[0].findAll('th'):
-        if not th.getText() in header:
-            header.append(th.getText())
+        if not th.getText() in header :
+            try:
+                int(th.getText())
+            except:
+                header.append(th.getText())
 
     # add in headers for home/away and w/l columns. a must to get the DataFrame to parse correctly
 
@@ -155,8 +164,8 @@ def soupTableToDF(table_soup, header):
         # remove blank rows
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
-        parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pd.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
+        parsed_table = [[col.getText() for col in row.findAll(['td', 'th'])] for row in rows] # build 2d list of table values
+        return pd.io.parsers.TextParser(parsed_table, names = header, index_col=2, parse_dates=True).get_chunk()
 
 
 def gameLogs(playerDictionary, name):

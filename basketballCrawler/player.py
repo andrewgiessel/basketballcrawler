@@ -20,7 +20,7 @@ class Player(object):
     gamelog_data = None
     gamelog_url_list = []
 
-    def __init__(self,_name,_overview_url,scrape_data=True):
+    def __init__(self, _name, _overview_url, scrape_data=True):
         self.name = _name
         self.overview_url = _overview_url
 
@@ -37,7 +37,7 @@ class Player(object):
             self.scrape_data()
 
     def scrape_data(self):
-        print self.name,self.overview_url
+        print self.name, self.overview_url
         if self.overview_url_content is not None:
             raise Exception("Can't populate this!")
 
@@ -45,11 +45,10 @@ class Player(object):
         self.overview_url_content = overview_soup.text
 
         try:
-            player_infotext = overview_soup.findAll('p',attrs={'class':'padding_bottom_half'})[0].text.split('\n')[0]
-
-            self.positions = re.findall(self.POSN_PATTERN,player_infotext)[0].strip().encode("utf8").split(" and ")
-            self.height = re.findall(self.HEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
-            self.weight = re.findall(self.WEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
+            pos = filter(lambda x: 'Position:' in x, [p.text for p in overview_soup.findAll('p')])[0].strip().replace('\n','')
+            self.positions = re.findall(self.POSN_PATTERN, pos)[0].strip().encode("utf8").split(" and ")
+            self.height = overview_soup.find('span', {'itemprop':'height'}).text
+            self.weight = overview_soup.find('span', {'itemprop':'weight'}).text[:-2]
 
         except Exception as ex:
             logging.error(ex.message)
@@ -65,7 +64,8 @@ class Player(object):
                 game_log_links =  li.findAll('a')
 
             for game_log_link in game_log_links:
-                self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
+                if 'gamelog' in game_log_link.get('href'):
+                    self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
 
     def to_json(self):
         return json.dumps(self.__dict__)

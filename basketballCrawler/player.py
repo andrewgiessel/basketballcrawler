@@ -64,7 +64,8 @@ class Player(object):
                 game_log_links =  li.findAll('a')
 
             for game_log_link in game_log_links:
-                self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
+                if 'gamelog' in game_log_link.get('href'):
+                    self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
 
     def to_json(self):
         return json.dumps(self.__dict__)

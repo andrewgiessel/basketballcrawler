@@ -25,7 +25,7 @@ def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     names = []
 
-    for letter in string.ascii_lowercase:
+    for letter in string.ascii_lowercase[0]:
         letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those

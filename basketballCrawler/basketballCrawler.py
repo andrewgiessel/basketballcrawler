@@ -159,7 +159,7 @@ def soupTableToDF(table_soup, header):
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pd.io.parsers.TextParser(parsed_table, names = header[1:], index_col=2, parse_dates=True).get_chunk()
+        return pd.io.parsers.TextParser(parsed_table, names = header[1:], index_col=1, parse_dates=True).get_chunk()
 
 
 def gameLogs(playerDictionary, name):

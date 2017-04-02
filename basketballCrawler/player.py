@@ -5,9 +5,9 @@ import json
 
 class Player(object):
     # Regex patterns for player info
-    POSN_PATTERN = u'^Position: (.*?)\u25aa'
-    HEIGHT_PATTERN = u'Height: ([0-9]-[0-9]{1,2})'
-    WEIGHT_PATTERN = u'Weight: ([0-9]{2,3}) lbs'
+    POSN_PATTERN = u'(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)'
+    HEIGHT_PATTERN = u'([0-9]-[0-9]{1,2})'
+    WEIGHT_PATTERN = u'([0-9]{2,3})lb'
 
     name = None
 
@@ -45,11 +45,13 @@ class Player(object):
         self.overview_url_content = overview_soup.text
 
         try:
-            player_infotext = overview_soup.findAll('p',attrs={'class':'padding_bottom_half'})[0].text.split('\n')[0]
-
-            self.positions = re.findall(self.POSN_PATTERN,player_infotext)[0].strip().encode("utf8").split(" and ")
-            self.height = re.findall(self.HEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
-            self.weight = re.findall(self.WEIGHT_PATTERN,player_infotext)[0].strip().encode("utf8")
+            player_position_text = overview_soup.findAll(text=re.compile(u'(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)'))[0]
+            player_height_text = overview_soup.findAll(text=re.compile(self.HEIGHT_PATTERN))[0]
+            player_weight_text = overview_soup.findAll(text=re.compile(self.WEIGHT_PATTERN))[0]
+            self.height = re.findall(self.HEIGHT_PATTERN,player_height_text)[0].strip().encode("utf8")
+            self.weight = re.findall(self.WEIGHT_PATTERN,player_weight_text)[0].strip().encode("utf8")
+            tempPositions = re.findall(self.POSN_PATTERN,player_position_text)
+            self.positions = [position.strip().encode("utf8") for position in tempPositions]
 
         except Exception as ex:
             logging.error(ex.message)

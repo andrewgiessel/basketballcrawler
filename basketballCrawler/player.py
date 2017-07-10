@@ -81,7 +81,7 @@ class Player(object):
         comments=all_all_salaries.find_all(string=lambda text:isinstance(text,Comment))
         raw_salary_rows = BeautifulSoup(comments[0], "lxml").find("tbody").find_all("tr")
         for each_raw_salary in raw_salary_rows:
-            year = each_raw_salary.find("th").text
+            year = each_raw_salary.find("th").text.encode("utf8")
             salary = self.salaryTextToFloat(each_raw_salary.find_all("td")[2].text)
             total_salaries.append((year, salary))
         return total_salaries

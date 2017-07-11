@@ -97,7 +97,11 @@ def loadPlayerDictionary(pathToFile):
         json_dict = json.loads(f.read())
         for player_name in json_dict:
             parsed_player = Player(None,None,False)
-            parsed_player.__dict__ = json_dict[player_name]
+            json_dict_player = json_dict[player_name]
+            if isinstance(json_dict_player, unicode):
+                parsed_player.__dict__ = json.loads(json_dict_player)
+            else:
+                parsed_player.__dict__ = json_dict_player
             result[player_name] = parsed_player
     return result
 

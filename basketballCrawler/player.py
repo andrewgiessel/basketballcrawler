@@ -93,7 +93,7 @@ class Player(object):
             team = row.find("td", attrs={"data-stat": "team_id"}).find("a")
             if team is None:
                 continue
-            self.teams_dict[season] = team
+            self.teams_dict[season] = team.get_text()
 
     def to_json(self):
         self.overview_url_content = None

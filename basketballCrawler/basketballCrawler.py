@@ -1,8 +1,8 @@
-import time
 import json
 import string
 import pandas as pd
 import logging
+from time import sleep
 from difflib import SequenceMatcher
 from .player import Player, getSoupFromURL
 from .coach import Coach
@@ -27,7 +27,8 @@ def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     for letter in string.ascii_lowercase:
         letter_page = getSoupFromURL('https://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
-
+        if letter_page is None:
+            continue
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
         current_names = letter_page.findAll('strong')
         for n in current_names:
@@ -36,7 +37,7 @@ def getCurrentPlayerNamesAndURLS(suppressOutput=True):
                 names.append((name_data.contents[0], 'https://www.basketball-reference.com' + name_data.attrs['href']))
             except Exception as e:
                 pass
-        time.sleep(1) # sleeping to be kind for requests
+        sleep(1) # sleeping to be kind for requests
 
     return dict(names)
 
@@ -53,7 +54,7 @@ def buildPlayerDictionary(suppressOutput=True):
     players={}
     for name, url in playerNamesAndURLS.items():
         players[name] = Player(name,url,scrape_data=True)
-        time.sleep(1) # sleep to be kind.
+        sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
 
@@ -73,7 +74,7 @@ def buildSpecificPlayerDictionary(playerNamesURLs, suppressOutput=True):
     for name, url in playerNamesURLs.items():
         if url is not None:
             players[name] = Player(name, url, scrape_data=True)
-            time.sleep(1) # sleep to be kind.
+            sleep(1) # sleep to be kind.
         else:
             logging.error("Player " + name + " not found!")
 
@@ -152,7 +153,7 @@ def dfFromGameLogURL(url):
     """
     Takes a url of a player's game log for a given year, returns a DataFrame
     """
-    time.sleep(1)
+    sleep(1)
     glsoup = getSoupFromURL(url)
 
     reg_season_table = glsoup.find_all('table', id="pgl_basic")  # id for reg season table
@@ -221,7 +222,8 @@ def getAllPlayerNamesAndURLS(suppressOutput=True):
 
     for letter in string.ascii_lowercase:
         letter_page = getSoupFromURL('https://www.basketball-reference.com/players/{}/'.format(letter), suppressOutput)
-
+        if letter_page is None:
+            continue
         all_rows = letter_page.find("table", id="players").find("tbody").find_all("tr")
         for row in all_rows:
             player = row.find("th", attrs={"data-stat": "player", "scope": "row"})
@@ -233,7 +235,7 @@ def getAllPlayerNamesAndURLS(suppressOutput=True):
                 names.append((name, 'https://www.basketball-reference.com' + player.attrs['href']))
             except Exception as e:
                 print("ERROR:", e)
-        time.sleep(1) # sleeping to be kind for requests
+        sleep(1) # sleeping to be kind for requests
 
     return dict(names)
 
@@ -244,7 +246,8 @@ def getAllPlayers(suppressOutput=True, min_year_active=2004):
 
     for letter in string.ascii_lowercase:
         letter_page = getSoupFromURL('https://www.basketball-reference.com/players/{}/'.format(letter), suppressOutput)
-
+        if letter_page is None:
+            continue
         all_rows = letter_page.find("table", id="players").find("tbody").find_all("tr")
         for row in all_rows:
             player = row.find("th", attrs={"data-stat": "player", "scope": "row"})
@@ -259,7 +262,7 @@ def getAllPlayers(suppressOutput=True, min_year_active=2004):
                     players[name] = Player(name, 'https://www.basketball-reference.com' + player.attrs['href'])
             except Exception as e:
                 print("ERROR:", e)
-        time.sleep(1) # sleeping to be kind for requests
+        sleep(1) # sleeping to be kind for requests
 
     return players
 
@@ -282,7 +285,7 @@ def getAllCoaches(suppressOutput=True, min_year_active=2004):
                 coaches[name] = Coach(name, 'https://www.basketball-reference.com' + coach.attrs['href'])
         except Exception as e:
             print("ERROR:", e)
-    time.sleep(1) # sleeping to be kind for requests
+    sleep(1) # sleeping to be kind for requests
     return coaches
 
 
@@ -305,6 +308,6 @@ def getCurrentTeams(suppressOutput=True):
             teams[name] = Team(name, 'https://www.basketball-reference.com' + team.attrs['href'])
         except Exception as e:
             print("ERROR:", e)
-    time.sleep(1)  # sleeping to be kind for requests
+    sleep(1)  # sleeping to be kind for requests
 
     return teams

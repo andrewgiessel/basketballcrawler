@@ -4,13 +4,15 @@ import string
 import pandas as pd
 import logging
 from difflib import SequenceMatcher
-from player import Player,getSoupFromURL
+from .player import Player, getSoupFromURL
+from .coach import Coach
+from .team import Team
 
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
            'buildPlayerDictionary', 'searchForName',
            'savePlayerDictionary', 'loadPlayerDictionary',
-           'gameLogs']
+           'allGameLogs', 'seasonGameLogs']
 
 BASKETBALL_LOG = 'basketball.log'
 
@@ -19,20 +21,19 @@ logging.basicConfig(filename=BASKETBALL_LOG,
                     )
 
 
-
 def getCurrentPlayerNamesAndURLS(suppressOutput=True):
 
     names = []
 
     for letter in string.ascii_lowercase:
-        letter_page = getSoupFromURL('http://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
+        letter_page = getSoupFromURL('https://www.basketball-reference.com/players/%s/' % (letter), suppressOutput)
 
         # we know that all the currently active players have <strong> tags, so we'll limit our names to those
         current_names = letter_page.findAll('strong')
         for n in current_names:
-            name_data = n.children.next()
+            name_data = n.children.__next__()
             try:
-                names.append((name_data.contents[0], 'http://www.basketball-reference.com' + name_data.attrs['href']))
+                names.append((name_data.contents[0], 'https://www.basketball-reference.com' + name_data.attrs['href']))
             except Exception as e:
                 pass
         time.sleep(1) # sleeping to be kind for requests
@@ -55,6 +56,32 @@ def buildPlayerDictionary(suppressOutput=True):
         time.sleep(1) # sleep to be kind.
 
     logging.debug("buildPlayerDictionary complete")
+
+    return players
+
+
+def buildSpecificPlayerDictionary(playerNamesURLs, suppressOutput=True):
+    """
+    Builds a dictionary for all specified players in the history of the league
+    """
+
+    logging.debug("Begin grabbing name list")
+    logging.debug("Name list grabbing complete")
+
+    logging.debug("Iterating over {} player names passed".format(len(playerNamesURLs)))
+    players={}
+    for name, url in playerNamesURLs.items():
+        if url is not None:
+            players[name] = Player(name, url, scrape_data=True)
+            time.sleep(1) # sleep to be kind.
+        else:
+            logging.error("Player " + name + " not found!")
+
+    logging.debug("buildSpecificPlayerDictionary complete")
+    if len(playerNamesURLs) == len(players):
+        logging.info("Successfully retrieved all players passed")
+    else:
+        logging.error("Missing {} players".format(len(playerNamesURLs) - len(players)))
 
     return players
 
@@ -85,7 +112,7 @@ def savePlayerDictionary(playerDictionary, pathToFile):
     Saves player dictionary to a JSON file
     """
     player_json = {name: player_data.to_json() for name, player_data in playerDictionary.items()}
-    json.dump(player_json, open(pathToFile, 'wb'), indent=0)
+    json.dump(player_json, open(pathToFile, 'w'), indent=0)
 
 
 def loadPlayerDictionary(pathToFile):
@@ -96,40 +123,60 @@ def loadPlayerDictionary(pathToFile):
     with open(pathToFile) as f:
         json_dict = json.loads(f.read())
         for player_name in json_dict:
-            parsed_player = Player(None,None,False)
-            parsed_player.__dict__ = json_dict[player_name]
+            parsed_player = Player(None, None, False)
+            parsed_player.__dict__ = json.loads(json_dict[player_name])
             result[player_name] = parsed_player
     return result
-
 
 
 def dfFromGameLogURLList(gamelogs):
     """
     Functions to parse the gamelogs
     Takes a list of game log urls and returns a concatenated DataFrame
+    # fix issue with missing columns (+/-) between older seasons and recent
     """
-    return pd.concat([dfFromGameLogURL(g) for g in gamelogs])
+    dataframes = [dfFromGameLogURL(g) for g in gamelogs]
+    final_dataframes = list()
+    final_columns = dataframes[-1].columns.values.tolist()
+    for df in dataframes:
+        missing_columns = set(final_columns) - set(df.columns.values.tolist())
+        if len(missing_columns) > 0:
+            final_df = df.reindex(final_columns, axis='columns')
+            final_dataframes.append(final_df)
+        else:
+            final_dataframes.append(df)
+    return pd.concat(final_dataframes)
 
 
 def dfFromGameLogURL(url):
     """
     Takes a url of a player's game log for a given year, returns a DataFrame
     """
+    time.sleep(1)
     glsoup = getSoupFromURL(url)
 
-    reg_season_table = glsoup.findAll('table', attrs={'id': 'pgl_basic'})  # id for reg season table
-    playoff_table = glsoup.findAll('table', attrs={'id': 'pgl_basic_playoffs'}) # id for playoff table
+    reg_season_table = glsoup.find_all('table', id="pgl_basic")  # id for reg season table
+    playoff_table = glsoup.find_all('table', id="pgl_basic_playoffs")  # id for playoff table
 
     # parse the table header.  we'll use this for the creation of the DataFrame
     header = []
-    for th in reg_season_table[0].findAll('th'):
-        if not th.getText() in header:
-            header.append(th.getText())
+    if len(reg_season_table) > 0 and reg_season_table[0] is not None:
+        table_header = reg_season_table[0].find("thead")
+    else:
+        print("Error retrieving game log from:")
+        print(url)
+        exit(1)
+    for th in table_header.find_all('th'):
+        # if not th.getText() in header:
+        header.append(th.getText())
 
     # add in headers for home/away and w/l columns. a must to get the DataFrame to parse correctly
 
-    header[5] = u'HomeAway'
-    header.insert(7, u'WinLoss')
+    header.insert(5, 'HomeAway')
+    header.insert(8, 'WinLoss')
+    header.pop(0)
+    header.remove('\xa0')
+    header.remove('\xa0')
 
     reg = soupTableToDF(reg_season_table, header)
     playoff = soupTableToDF(playoff_table, header)
@@ -156,9 +203,108 @@ def soupTableToDF(table_soup, header):
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pd.io.parsers.TextParser(parsed_table, names=header, index_col=2, parse_dates=True).get_chunk()
+        return pd.DataFrame.from_records(parsed_table, columns=header)
 
 
-def gameLogs(playerDictionary, name):
+def allGameLogs(playerDictionary, name):
     ### would be nice to put some caching logic here...
     return dfFromGameLogURLList(playerDictionary[name].gamelog_url_list)
+
+
+def seasonGameLogs(playerDictionary, name, season):
+    return dfFromGameLogURL(playerDictionary.get(name).gamelog_url_dict.get(season))
+
+
+def getAllPlayerNamesAndURLS(suppressOutput=True):
+
+    names = []
+
+    for letter in string.ascii_lowercase:
+        letter_page = getSoupFromURL('https://www.basketball-reference.com/players/{}/'.format(letter), suppressOutput)
+
+        all_rows = letter_page.find("table", id="players").find("tbody").find_all("tr")
+        for row in all_rows:
+            player = row.find("th", attrs={"data-stat": "player", "scope": "row"})
+            if player is None:
+                continue
+            player = player.find("a")
+            name = player.get_text()
+            try:
+                names.append((name, 'https://www.basketball-reference.com' + player.attrs['href']))
+            except Exception as e:
+                print("ERROR:", e)
+        time.sleep(1) # sleeping to be kind for requests
+
+    return dict(names)
+
+
+def getAllPlayers(suppressOutput=True, min_year_active=2004):
+
+    players = dict()
+
+    for letter in string.ascii_lowercase:
+        letter_page = getSoupFromURL('https://www.basketball-reference.com/players/{}/'.format(letter), suppressOutput)
+
+        all_rows = letter_page.find("table", id="players").find("tbody").find_all("tr")
+        for row in all_rows:
+            player = row.find("th", attrs={"data-stat": "player", "scope": "row"})
+            if player is None:
+                continue
+            player = player.find("a")
+            name = player.get_text()
+            last_year_active_soup = row.find("td", attrs={"data-stat": "year_max"})
+            last_year_active = int(last_year_active_soup.get_text())
+            try:
+                if last_year_active >= min_year_active:
+                    players[name] = Player(name, 'https://www.basketball-reference.com' + player.attrs['href'])
+            except Exception as e:
+                print("ERROR:", e)
+        time.sleep(1) # sleeping to be kind for requests
+
+    return players
+
+
+def getAllCoaches(suppressOutput=True, min_year_active=2004):
+
+    coaches = dict()
+    glsoup = getSoupFromURL('https://www.basketball-reference.com/coaches/', suppressOutput)
+    all_rows = glsoup.find("table", id="coaches").find("tbody").find_all("tr")
+    for row in all_rows:
+        coach = row.find("th", attrs={"data-stat": "coach", "scope": "row"})
+        if coach is None:
+            continue
+        coach = coach.find("a")
+        name = coach.get_text()
+        last_year_active_soup = row.find("td", attrs={"data-stat": "year_max"})
+        last_year_active = int(last_year_active_soup.get_text())
+        try:
+            if last_year_active >= min_year_active:
+                coaches[name] = Coach(name, 'https://www.basketball-reference.com' + coach.attrs['href'])
+        except Exception as e:
+            print("ERROR:", e)
+    time.sleep(1) # sleeping to be kind for requests
+    return coaches
+
+
+def getCurrentTeams(suppressOutput=True):
+
+    teams = dict()
+    glsoup = getSoupFromURL('https://www.basketball-reference.com/teams/', suppressOutput)
+
+    active_teams_table = glsoup.find('table', id='teams_active')  # id for reg season table
+    all_rows = active_teams_table.find_all("th", attrs={"data-stat": "franch_name"})
+    active_teams = list()
+    for row in all_rows:
+        team = row.find("a")
+        if team is None:
+            continue
+        active_teams.append(team)
+    for team in active_teams:
+        name = team.get_text()
+        try:
+            teams[name] = Team(name, 'https://www.basketball-reference.com' + team.attrs['href'])
+        except Exception as e:
+            print("ERROR:", e)
+    time.sleep(1)  # sleeping to be kind for requests
+
+    return teams

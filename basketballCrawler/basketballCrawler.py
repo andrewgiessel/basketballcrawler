@@ -230,9 +230,11 @@ def soupTableToDF(table_soup, header):
         # remove blank rows
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
-        parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
+        # build 2d list of table values
+        parsed_rows = [[col.getText() for col in row.findAll('td')] for row in rows]
+        parsed_table = [row for row in parsed_rows if row[0] != ""]
         try:
-            return  pd.DataFrame.from_records(parsed_table, columns=header)
+            return pd.DataFrame.from_records(parsed_table, columns=header).dropna(subset=["G"])
         except Exception as e:
             print("ERROR - Couldn't create dataframe:", e)
             print(parsed_table)

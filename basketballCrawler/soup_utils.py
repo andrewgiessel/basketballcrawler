@@ -1,6 +1,6 @@
 import requests
 from time import sleep
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 
 
 def getSoupFromURL(url, suppressOutput=True, max_retry=3):
@@ -31,3 +31,11 @@ def getSoupFromURL(url, suppressOutput=True, max_retry=3):
             return None
         except requests.exceptions.RequestException as e:
             print("ERROR:", e)
+
+
+def find_html_in_comment(soup):
+    for element in soup.children:
+        if isinstance(element, Comment):
+            comment = str(element.string).strip()
+            return BeautifulSoup(comment, 'html5lib')
+    return None

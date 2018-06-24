@@ -4,6 +4,7 @@ import pandas as pd
 import logging
 from time import sleep
 from difflib import SequenceMatcher
+from .soup_utils import find_html_in_comment
 from .player import Player, getSoupFromURL
 from .coach import Coach
 from .team import Team
@@ -130,13 +131,14 @@ def loadPlayerDictionary(pathToFile):
     return result
 
 
-def dfFromGameLogURLList(gamelogs):
+def dfFromGameLogURLList(gamelogs, dataframes=None):
     """
     Functions to parse the gamelogs
     Takes a list of game log urls and returns a concatenated DataFrame
     # fix issue with missing columns (+/-) between older seasons and recent
     """
-    dataframes = [dfFromGameLogURL(g) for g in gamelogs]
+    if dataframes is None:
+        dataframes = [dfFromGameLogURL(g) for g in gamelogs]
     final_dataframes = list()
     final_columns = dataframes[-1].columns.values.tolist()
     for df in dataframes:
@@ -146,7 +148,12 @@ def dfFromGameLogURLList(gamelogs):
             final_dataframes.append(final_df)
         else:
             final_dataframes.append(df)
-    return pd.concat(final_dataframes)
+    try:
+        return pd.concat(final_dataframes)
+    except Exception as e:
+        print("ERROR - Couldn't merge dataframes:", e)
+        print(final_dataframes)
+        return None
 
 
 def dfFromGameLogURL(url):
@@ -157,7 +164,7 @@ def dfFromGameLogURL(url):
     glsoup = getSoupFromURL(url)
 
     reg_season_table = glsoup.find_all('table', id="pgl_basic")  # id for reg season table
-    playoff_table = glsoup.find_all('table', id="pgl_basic_playoffs")  # id for playoff table
+    playoff_table = find_playoff_table(glsoup)
 
     # parse the table header.  we'll use this for the creation of the DataFrame
     header = []
@@ -187,7 +194,27 @@ def dfFromGameLogURL(url):
     elif playoff is None:
         return reg
     else:
-        return pd.concat([reg, playoff])
+        try:
+            return pd.concat([reg, playoff])
+        except Exception as e:
+            print("ERROR - Couldn't merge dataframes:", e)
+            print(reg)
+            print(playoff)
+            return None
+
+
+def find_playoff_table(glsoup):
+    playoff_table = glsoup.find_all('table', id="pgl_basic_playoffs")  # id for playoff table
+    if len(playoff_table) > 0:
+        return playoff_table
+    div_soup = glsoup.find("div", id="all_pgl_basic_playoffs")
+    if div_soup is None:
+        return []
+    playoff_soup = find_html_in_comment(div_soup)
+    if playoff_soup is None:
+        return []
+    playoff_table = playoff_soup.find_all('table', id="pgl_basic_playoffs")
+    return playoff_table
 
 
 def soupTableToDF(table_soup, header):
@@ -204,12 +231,17 @@ def soupTableToDF(table_soup, header):
         rows = [r for r in rows if len(r.findAll('td')) > 0]
 
         parsed_table = [[col.getText() for col in row.findAll('td')] for row in rows] # build 2d list of table values
-        return pd.DataFrame.from_records(parsed_table, columns=header)
+        try:
+            return  pd.DataFrame.from_records(parsed_table, columns=header)
+        except Exception as e:
+            print("ERROR - Couldn't create dataframe:", e)
+            print(parsed_table)
+            return None
 
 
-def allGameLogs(playerDictionary, name):
+def allGameLogs(playerDictionary, name, dataframes=None):
     ### would be nice to put some caching logic here...
-    return dfFromGameLogURLList(playerDictionary[name].gamelog_url_list)
+    return dfFromGameLogURLList(playerDictionary.get(name).gamelog_url_list, dataframes)
 
 
 def seasonGameLogs(playerDictionary, name, season):

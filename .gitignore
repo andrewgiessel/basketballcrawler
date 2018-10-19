@@ -54,3 +54,5 @@ tramp
 # OSX
 .DS_Store
 ._*
+
+\.idea/

@@ -1,43 +1,37 @@
-from soup_utils import getSoupFromURL
+from .soup_utils import getSoupFromURL
 import re
 import logging
 import json
 
+
 class Player(object):
     # Regex patterns for player info
-    POSN_PATTERN = u'(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)'
-    HEIGHT_PATTERN = u'([0-9]-[0-9]{1,2})'
-    WEIGHT_PATTERN = u'([0-9]{2,3})lb'
+    POSN_PATTERN = re.compile('(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)')
+    HEIGHT_PATTERN = re.compile('(^[0-9]-[0-9]{1,2})')
+    WEIGHT_PATTERN = re.compile('([0-9]{2,3})lb')
+    NICKNAMES_PATTERN = re.compile("[(]([A-Za-z, 0-9-.]+)[)]")
 
-    name = None
-
-    positions = []
-    height = None
-    weight = None
-
-    overview_url = None
-    overview_url_content = None
-    gamelog_data = None
-    gamelog_url_list = []
-
-    def __init__(self,_name,_overview_url,scrape_data=True):
+    def __init__(self, _name, _overview_url, scrape_data=True):
         self.name = _name
         self.overview_url = _overview_url
 
         # Explicitly declaring all fields in the constructor will ensure that
         # they're included in JSON serialization
+        self.nicknames = []
         self.positions = []
         self.height = None
         self.weight = None
+        self.teams_dict = {}
         self.overview_url_content = None
         self.gamelog_data = None
         self.gamelog_url_list = []
+        self.gamelog_url_dict = {}
 
         if scrape_data:
             self.scrape_data()
 
     def scrape_data(self):
-        print self.name,self.overview_url
+        print(self.name, self.overview_url)
         if self.overview_url_content is not None:
             raise Exception("Can't populate this!")
 
@@ -45,29 +39,62 @@ class Player(object):
         self.overview_url_content = overview_soup.text
 
         try:
-            player_position_text = overview_soup.findAll(text=re.compile(u'(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)'))[0]
-            player_height_text = overview_soup.findAll(text=re.compile(self.HEIGHT_PATTERN))[0]
-            player_weight_text = overview_soup.findAll(text=re.compile(self.WEIGHT_PATTERN))[0]
-            self.height = re.findall(self.HEIGHT_PATTERN,player_height_text)[0].strip().encode("utf8")
-            self.weight = re.findall(self.WEIGHT_PATTERN,player_weight_text)[0].strip().encode("utf8")
-            tempPositions = re.findall(self.POSN_PATTERN,player_position_text)
-            self.positions = [position.strip().encode("utf8") for position in tempPositions]
+            player_position_text = overview_soup.find_all(text=self.POSN_PATTERN)[0]
+            player_height_text = overview_soup.find_all(text=self.HEIGHT_PATTERN)[0]
+            player_weight_text = overview_soup.find_all(text=self.WEIGHT_PATTERN)[0]
+            self.height = self.HEIGHT_PATTERN.findall(player_height_text)[0].strip()
+            self.weight = self.WEIGHT_PATTERN.findall(player_weight_text)[0].strip()
+            tempPositions = self.POSN_PATTERN.findall(player_position_text)
+            self.positions = [position.strip() for position in tempPositions]
+            self.scrape_player_nicknames(overview_soup)
+            self.scrape_teams(overview_soup)
 
         except Exception as ex:
-            logging.error(ex.message)
+            logging.error(ex)
             self.positions = []
+            self.nicknames = []
             self.height = None
             self.weight = None
 
         # the links to each year's game logs are in <li> tags, and the text contains 'Game Logs'
         # so we can use those to pull out our urls.
+        link_prefix = "https://www.basketball-reference.com"
         for li in overview_soup.find_all('li'):
-            game_log_links = []
             if 'Game Logs' in li.getText():
-                game_log_links =  li.findAll('a')
+                all_links = li.findAll('a')
+                for link in all_links:
+                    link_suffix = link.get('href')
+                    if "/gamelog/" in link_suffix:
+                        full_link = link_prefix + link_suffix
+                        season = link.get_text().strip()
+                        self.gamelog_url_list.append(full_link)
+                        self.gamelog_url_dict[season] = full_link
+                if len(self.gamelog_url_list) > 0:
+                    break
 
-            for game_log_link in game_log_links:
-                self.gamelog_url_list.append('http://www.basketball-reference.com' + game_log_link.get('href'))
+    def scrape_player_nicknames(self, soup):
+        bio_soup = soup.find('div', id="meta")
+        bio_lines = bio_soup.find_all('p')
+        for line in bio_lines:
+            line_text = re.sub("\n", "", line.get_text())
+            nicknames_text = self.NICKNAMES_PATTERN.match(line_text)
+            if nicknames_text is not None:
+                nicknames_text = nicknames_text.group(1)
+                self.nicknames = nicknames_text.split(", ")
+                return
+
+    def scrape_teams(self, soup):
+        all_rows = soup.find("table", id="per_game").find("tbody").find_all("tr")
+        for row in all_rows:
+            season = row.find("th", attrs={"data-stat": "season"})
+            if season is None:
+                continue
+            season = season.find("a").get_text()
+            team = row.find("td", attrs={"data-stat": "team_id"}).find("a")
+            if team is None:
+                continue
+            self.teams_dict[season] = team.get_text()
 
     def to_json(self):
+        self.overview_url_content = None
         return json.dumps(self.__dict__)

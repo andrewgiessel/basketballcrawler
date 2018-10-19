@@ -15,6 +15,7 @@ Requirements
 
 - [Beautiful Soup](http://www.crummy.com/software/BeautifulSoup/bs4/doc/#) >= 4.0
 - [pandas](http://pandas.pydata.org/) >= 0.11
+- [request](http://docs.python-requests.org/en/master/) >= 2.0
 
 
 Usage

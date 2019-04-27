@@ -1,13 +1,14 @@
 import json
 import string
+import re
 import pandas as pd
 import logging
 from time import sleep
 from difflib import SequenceMatcher
-from .soup_utils import find_html_in_comment
-from .player import Player, getSoupFromURL
-from .coach import Coach
-from .team import Team
+import requests
+from time import sleep
+from bs4 import BeautifulSoup, Comment
+
 
 
 __all__ = ['getSoupFromURL', 'getCurrentPlayerNamesAndURLS',
@@ -345,3 +346,243 @@ def getCurrentTeams(suppressOutput=True):
     sleep(1)  # sleeping to be kind for requests
 
     return teams
+
+
+##### coach.py
+
+class Coach(object):
+
+    def __init__(self, name, _overview_url, scrape_data=True):
+        self.name = name
+        self.overview_url = _overview_url
+        self.overview_url_content = None
+        self.teams = {}
+
+        if scrape_data:
+            self.scrape_data()
+
+    def scrape_data(self):
+        print(self.name, self.overview_url)
+        if self.overview_url_content is not None:
+            raise Exception("Can't populate this!")
+
+        overview_soup = getSoupFromURL(self.overview_url)
+        self.overview_url_content = overview_soup.text
+
+        try:
+            self.scrape_teams(overview_soup)
+
+        except Exception as ex:
+            logging.error(ex.message)
+            self.teams = {}
+
+    def scrape_teams(self, soup):
+        table_soup = soup.find("table", id="coach-stats").find("tbody")
+        rows = table_soup.find_all("tr")
+        for row in rows:
+            season = row.find("th", attrs={"data-stat": "season"}).get_text()
+            team = row.find("td", attrs={"data-stat": "team_id"}).find("a").get("title")
+            self.teams[season] = team
+
+
+###### player.py
+class Player(object):
+    # Regex patterns for player info
+    POSN_PATTERN = re.compile('(Point Guard|Center|Power Forward|Shooting Guard|Small Forward)')
+    HEIGHT_PATTERN = re.compile('(^[0-9]-[0-9]{1,2})')
+    WEIGHT_PATTERN = re.compile('([0-9]{2,3})lb')
+    NICKNAMES_PATTERN = re.compile("[(]([A-Za-z, 0-9-.]+)[)]")
+
+    def __init__(self, _name, _overview_url, scrape_data=True):
+        self.name = _name
+        self.overview_url = _overview_url
+
+        # Explicitly declaring all fields in the constructor will ensure that
+        # they're included in JSON serialization
+        self.nicknames = []
+        self.positions = []
+        self.height = None
+        self.weight = None
+        self.teams_dict = {}
+        self.overview_url_content = None
+        self.gamelog_data = None
+        self.gamelog_url_list = []
+        self.gamelog_url_dict = {}
+
+        if scrape_data:
+            self.scrape_data()
+
+    def scrape_data(self):
+        print(self.name, self.overview_url)
+        if self.overview_url_content is not None:
+            raise Exception("Can't populate this!")
+
+        overview_soup = getSoupFromURL(self.overview_url)
+        self.overview_url_content = overview_soup.text
+
+        try:
+            player_position_text = overview_soup.find_all(text=self.POSN_PATTERN)[0]
+            player_height_text = overview_soup.find_all(text=self.HEIGHT_PATTERN)[0]
+            player_weight_text = overview_soup.find_all(text=self.WEIGHT_PATTERN)[0]
+            self.height = self.HEIGHT_PATTERN.findall(player_height_text)[0].strip()
+            self.weight = self.WEIGHT_PATTERN.findall(player_weight_text)[0].strip()
+            tempPositions = self.POSN_PATTERN.findall(player_position_text)
+            self.positions = [position.strip() for position in tempPositions]
+            self.scrape_player_nicknames(overview_soup)
+            self.scrape_teams(overview_soup)
+
+        except Exception as ex:
+            logging.error(ex)
+            self.positions = []
+            self.nicknames = []
+            self.height = None
+            self.weight = None
+
+        # the links to each year's game logs are in <li> tags, and the text contains 'Game Logs'
+        # so we can use those to pull out our urls.
+        link_prefix = "https://www.basketball-reference.com"
+        for li in overview_soup.find_all('li'):
+            if 'Game Logs' in li.getText():
+                all_links = li.findAll('a')
+                for link in all_links:
+                    link_suffix = link.get('href')
+                    if "/gamelog/" in link_suffix:
+                        full_link = link_prefix + link_suffix
+                        season = link.get_text().strip()
+                        self.gamelog_url_list.append(full_link)
+                        self.gamelog_url_dict[season] = full_link
+                if len(self.gamelog_url_list) > 0:
+                    break
+
+    def scrape_player_nicknames(self, soup):
+        bio_soup = soup.find('div', id="meta")
+        bio_lines = bio_soup.find_all('p')
+        for line in bio_lines:
+            line_text = re.sub("\n", "", line.get_text())
+            nicknames_text = self.NICKNAMES_PATTERN.match(line_text)
+            if nicknames_text is not None:
+                nicknames_text = nicknames_text.group(1)
+                self.nicknames = nicknames_text.split(", ")
+                return
+
+    def scrape_teams(self, soup):
+        all_rows = soup.find("table", id="per_game").find("tbody").find_all("tr")
+        for row in all_rows:
+            season = row.find("th", attrs={"data-stat": "season"})
+            if season is None:
+                continue
+            season = season.find("a").get_text()
+            team = row.find("td", attrs={"data-stat": "team_id"}).find("a")
+            if team is None:
+                continue
+            self.teams_dict[season] = team.get_text()
+
+    def to_json(self):
+        self.overview_url_content = None
+        return json.dumps(self.__dict__)
+
+
+######## soup_utils.py
+
+def getSoupFromURL(url, suppressOutput=True, max_retry=3):
+    """
+    This function grabs the url and returns and returns the BeautifulSoup object
+    """
+    if not suppressOutput:
+        print(url)
+
+    num_attempts = 0
+    while num_attempts < max_retry:
+        try:
+            num_attempts += 1
+            r = requests.get(url)
+            r.raise_for_status()
+            return BeautifulSoup(r.text, "html5lib")
+        except requests.exceptions.HTTPError as http:
+            print("ERROR - HTTP:", http)
+            if http.errno == 500:
+                sleep(5)
+        except requests.exceptions.ConnectionError as connection:
+            print("ERROR - Connection:", connection)
+            return None
+        except requests.exceptions.Timeout as timeout:
+            print("ERROR - Timeout:", timeout)
+        except requests.exceptions.TooManyRedirects as redir:
+            print("ERROR - Bad URL:", redir)
+            return None
+        except requests.exceptions.RequestException as e:
+            print("ERROR:", e)
+
+
+def find_html_in_comment(soup):
+    for element in soup.children:
+        if isinstance(element, Comment):
+            comment = str(element.string).strip()
+            return BeautifulSoup(comment, 'html5lib')
+    return None
+
+
+
+####### team.py
+
+class Team(object):
+    ID_PATTERN = "[A-Z]{3}"
+
+    def __init__(self, name, _overview_url, scrape_data=True):
+        self.name = name
+        self.id = self.get_id_from_url(_overview_url)
+        self.overview_url = _overview_url
+        self.overview_url_content = None
+        self.location = None
+        self.former_names = None
+        self.coach = None
+
+        if scrape_data:
+            self.scrape_data()
+
+    def get_id_from_url(self, url):
+        team_id_regex = re.compile(self.ID_PATTERN)
+        return team_id_regex.search(url).group(0)
+
+    def scrape_data(self):
+        print(self.name, self.overview_url)
+        if self.overview_url_content is not None:
+            raise Exception("Can't populate this!")
+
+        overview_soup = getSoupFromURL(self.overview_url)
+        self.overview_url_content = overview_soup.text
+
+        try:
+            bio_soup = overview_soup.find('div', attrs={"id": "meta"})
+            bio_lines = bio_soup.find_all('p')
+            bio_text_lines = [line for line in bio_lines if line.find("strong") is not None]
+            self.scrape_location(bio_text_lines)
+            self.scrape_former_names(bio_text_lines)
+
+        except Exception as ex:
+            logging.error(ex.message)
+            self.location = {}
+            self.former_names = []
+
+    def scrape_location(self, soup):
+        location_line_text = soup[0].get_text()
+        location_text = re.sub("\n ?", "", location_line_text)
+        location_text = re.sub(" ?Location: ", "", location_text).split(", ")
+        self.location = {"city": location_text[0], "state": location_text[1]}
+
+    def scrape_former_names(self, soup):
+        former_names_line_text = soup[1].get_text()
+        former_names_text = re.sub("\n ?", "", former_names_line_text)
+        self.former_names = re.sub(" ?Team Names: ", "", former_names_text).split(", ")
+
+    def get_location(self):
+        return f"{self.location.get('city')}, {self.location.get('state')}"
+
+    def get_city(self):
+        return self.location.get('city')
+
+    def get_state(self):
+        return self.location.get('state')
+
+    def get_name(self):
+        return self.name
